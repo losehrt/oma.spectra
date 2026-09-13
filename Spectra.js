@@ -304,3 +304,19 @@ function removeRoot(roots, path) {
 function joinRoots(roots, home) {
   return roots.map(function(r) { return abbreviateHome(r, home); }).join(":");
 }
+
+// ---- CLI invocation ---------------------------------------------------------
+
+// The shell is a GUI process with the login-session PATH, so a CLI installed
+// by mise/nvm may be invisible to it. Run through the user's login shell the
+// way Omarchy's own Util.execArgv does: `exec` replaces bash, and the command
+// plus arguments ride in argv so nothing is re-parsed by the shell.
+function cliCommand(cli, args) {
+  return ["bash", "-lc", 'exec "$@"', "bash", cli].concat(args || []);
+}
+
+// bash answers 127 when `exec` finds nothing; the same wording covers a bash
+// that could not start at all.
+function startFailureMessage(cli) {
+  return cli + " could not be found, even through the login shell";
+}

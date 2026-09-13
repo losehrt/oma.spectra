@@ -66,5 +66,9 @@ check("removeRoot keeps last", removeRoot(["/a"], "/a"), ["/a"]);
 check("removeRoot", removeRoot(["/a", "/b"], "/b"), ["/a"]);
 check("joinRoots", joinRoots(["/home/u/projects", "/home/u/work"], "/home/u"), "~/projects:~/work");
 
+// CLI invocation
+check("cliCommand", cliCommand("spxa", ["list", "--json"]), ["bash", "-lc", 'exec "$@"', "bash", "spxa", "list", "--json"]);
+check("startFailureMessage", startFailureMessage("specx"), "specx could not be found, even through the login shell");
+
 console.log(failures === 0 ? "all passed" : failures + " failed");
 process.exit(failures === 0 ? 0 : 1);
