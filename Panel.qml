@@ -335,6 +335,35 @@ Panel {
     if (cursorKind === "project") cursorCol = wrapped
   }
 
+  // Settings of this widget (not of a project) are persisted the way the
+  // clock panel does it: apply locally, then hand the entry to the shell,
+  // which writes shell.json and pushes the same values back to the widget.
+  property string persistWarning: ""
+
+  function persistSettings(values) {
+    var entry = { id: root.moduleName }
+    for (var existing in root.settings) if (existing !== "id") entry[existing] = root.settings[existing]
+    for (var key in values) entry[key] = values[key]
+    root.settings = entry
+    if ("hostWidget" in root && root.hostWidget && "settings" in root.hostWidget) root.hostWidget.settings = entry
+    if (root.bar && root.bar.shell && typeof root.bar.shell.updateEntryInline === "function") {
+      root.bar.shell.updateEntryInline(root.moduleName, entry)
+      persistWarning = ""
+    } else {
+      persistWarning = "未寫入 shell.json（widget 不在 bar layout）"
+    }
+  }
+
+  // "" on success, otherwise the reason shown under the field.
+  function setRoots(value) {
+    var v = String(value || "").trim()
+    if (Spectra.splitRoots(v, Quickshell.env("HOME")).length === 0) return "至少要一個資料夾"
+    persistSettings({ projectsRoot: v })
+    projects.checkRoots(projects.roots)
+    projects.refreshAll()
+    return ""
+  }
+
   function refreshNow() {
     projects.refreshAll()
     if (project && selectedChangeName !== "") {
@@ -447,6 +476,10 @@ Panel {
       else return "unknown action: " + action + " (show|hide|toggle)"
       return "ok"
     }
+    function setRoots(value: string): string {
+      var reason = root.setRoots(value)
+      return reason === "" ? "ok" : reason
+    }
     function specs(action: string): string {
       if (action === "show") root.specsExpanded = true
       else if (action === "hide") root.specsExpanded = false
@@ -497,6 +530,7 @@ Panel {
         changes: p ? p.changes.map(function(c) { return c.name + (c.parked ? " (parked)" : "") }) : [],
         archived: p ? p.archived.map(function(c) { return c.key }) : [], archivedExpanded: root.archivedExpanded,
         specsExpanded: root.specsExpanded, contentExpanded: root.contentExpanded, contentPath: root.contentPath,
+        missingRoots: projects.missingRoots, persistWarning: root.persistWarning,
         cursor: { row: root.cursorRow, col: root.cursorCol, kind: root.cursorKind, label: root.cursorLabel },
         targets: Object.keys(root.cursorTargets).length,
         rows: root.cursorRows.map(function(r) { return r.kind + (r.items.length > 1 ? "(" + r.items.length + ")" : "") }),

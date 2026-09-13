@@ -79,6 +79,27 @@ Scope {
     projects = list
   }
 
+  // Roots that are not directories, for the editor's hint line. One `sh`
+  // per check; the paths ride in argv so no shell string sees them.
+  property var missingRoots: []
+
+  function checkRoots(list) {
+    if (checkProcess.running) return
+    checkProcess.command = ["sh", "-c", 'for d in "$@"; do [ -d "$d" ] || printf "%s\n" "$d"; done', "sh"].concat(list)
+    checkProcess.running = true
+  }
+
+  Process {
+    id: checkProcess
+    running: false
+    stdout: StdioCollector { waitForEnd: true }
+    onExited: function(exitCode, exitStatus) {
+      Qt.callLater(function() {
+        root.missingRoots = String(checkProcess.stdout.text).split("\n").filter(function(l) { return l.trim() !== "" })
+      })
+    }
+  }
+
   // Chip label for a project path: its name, or `<root>/<name>` on a clash.
   function labelFor(path) {
     for (var i = 0; i < records.length; i++)
