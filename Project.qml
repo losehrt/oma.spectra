@@ -172,12 +172,7 @@ Scope {
   }
 
   function listingResult(exitCode, out, err) {
-    // bash's own "not found"; any other 127 keeps its stderr line below.
-    if (Spectra.isCliNotFound(exitCode, err, cli)) return startFailure()
-    var entries = exitCode === 0 ? Spectra.parseChangeList(out) : null
-    if (entries !== null) return { entries: entries, error: "" }
-    var line = Spectra.firstLine(err) || Spectra.firstLine(out)
-    return { entries: [], error: line !== "" ? line : (cli + " list exited with code " + exitCode) }
+    return Spectra.listingOutcome(exitCode, out, err, cli)
   }
 
   Process {

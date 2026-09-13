@@ -328,3 +328,12 @@ function startFailureMessage(cli) {
 function isCliNotFound(exitCode, stderr, cli) {
   return exitCode === 127 && new RegExp("exec: " + cli.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + ": not found").test(String(stderr || ""));
 }
+
+// One listing process's outcome: the entries, or the one line to show.
+function listingOutcome(exitCode, out, err, cli) {
+  if (isCliNotFound(exitCode, err, cli)) return { entries: [], error: startFailureMessage(cli) };
+  var entries = exitCode === 0 ? parseChangeList(out) : null;
+  if (entries !== null) return { entries: entries, error: "" };
+  var line = firstLine(err) || firstLine(out);
+  return { entries: [], error: line !== "" ? line : (cli + " list exited with code " + exitCode) };
+}

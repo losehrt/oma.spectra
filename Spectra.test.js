@@ -72,5 +72,10 @@ check("isCliNotFound bash", isCliNotFound(127, "bash: line 1: exec: spxa: not fo
 check("isCliNotFound interpreter", isCliNotFound(127, "env: 'node': No such file or directory", "spxa"), false);
 check("startFailureMessage", startFailureMessage("specx"), "specx could not be found, even through the login shell");
 
+check("listingOutcome not found", listingOutcome(127, "", "bash: line 1: exec: spxa: not found", "spxa").error, "spxa could not be found, even through the login shell");
+check("listingOutcome stderr line", listingOutcome(1, "", "boom: bad config\nmore", "spxa").error, "boom: bad config");
+check("listingOutcome non-json", listingOutcome(0, "Welcome!\n{", "", "spxa").error, "Welcome!");
+check("listingOutcome ok", listingOutcome(0, '{"changes":[{"name":"a"}]}', "", "spxa").entries.length, 1);
+
 console.log(failures === 0 ? "all passed" : failures + " failed");
 process.exit(failures === 0 ? 0 : 1);
