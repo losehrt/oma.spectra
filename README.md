@@ -17,8 +17,10 @@ omarchy plugin add https://github.com/losehrt/oma.spectra.git --enable
 
 That clones this repository into `~/.config/omarchy/plugins/oma.spectra`
 and drops the icon into your bar; `omarchy plugin update` pulls new versions.
-The panel drives the Spectra CLI, so one of `spxa`, `specx` or `spectra`
-must be on the shell's login PATH:
+The panel runs the command each project names as `cli_command` in its
+`.spectra.yaml` (`spectra` when the line is missing), so that command must
+be on the shell's login PATH. With the npm package the binary is `spxa`,
+and projects initialised by it record `cli_command: spxa`:
 
 ```sh
 npm install -g @kaochenlong/spxa
