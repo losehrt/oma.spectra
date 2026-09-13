@@ -38,10 +38,6 @@ the update button. Everything it shows is read from files and from
 `<cli> list` / `<cli> status`. Like every Omarchy plugin it runs unsandboxed
 inside the shell, so read the code before enabling it.
 
-The `docs/spectra/` directory holds this plugin's own Spectra specifications
-and archived changes — the panel can browse them once you point
-`projectsRoot` at a folder containing this repository.
-
 ## Bar
 
 The icon is the Spectra mark from https://spectra.5xcamp.us/ (`assets/spectra.svg`,

@@ -1,2 +1,7 @@
-# Spectra app data
+# Spectra working files: specs, changes, CLI config and the generated Claude
+# skills are development material for this plugin, not part of the release.
 .spectra/
+.spectra.yaml
+docs/spectra/
+.claude/
+CLAUDE.md
