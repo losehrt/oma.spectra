@@ -130,14 +130,16 @@ Scope {
   property string browseDir: ""
   property var browseEntries: []
   property string browseError: ""
-  property string browseQueued: ""
+  property int browseGeneration: 0
 
   function browseTo(dir) {
     var d = String(dir || "").replace(/\/+$/, "") || "/"
     browsing = true
-    if (browseProcess.running) { browseQueued = d; return }
+    // A newer request wins outright: stop the listing in flight and restart.
+    if (browseProcess.running) { browseGeneration++; browseProcess.running = false }
     browseDir = d
     browseError = ""
+    browseEntries = []
     browseProcess.command = ["sh", "-c",
       'find -L "$1" -mindepth 1 -maxdepth 1 -type d ! -name ".*" && echo -- && find -L "$1" -mindepth 2 -maxdepth 2 -name .spectra.yaml 2>/dev/null',
       "sh", d]
@@ -157,8 +159,13 @@ Scope {
     running: false
     stdout: StdioCollector { waitForEnd: true }
     stderr: StdioCollector { waitForEnd: true }
+    property int generation: 0
+    onStarted: generation = root.browseGeneration
     onExited: function(exitCode, exitStatus) {
+      var mine = generation
       Qt.callLater(function() {
+        // A listing we cancelled reports its exit too; ignore it.
+        if (mine !== root.browseGeneration || !root.browsing) return
         if (exitCode === 0) {
           root.browseEntries = Spectra.parseBrowse(browseProcess.stdout.text)
           root.browseError = ""
@@ -166,7 +173,6 @@ Scope {
           root.browseEntries = []
           root.browseError = "無法讀取"
         }
-        if (root.browseQueued !== "") { var next = root.browseQueued; root.browseQueued = ""; root.browseTo(next) }
       })
     }
   }

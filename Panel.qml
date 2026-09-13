@@ -46,6 +46,17 @@ Panel {
     var rows = []
     var p = project
     rows.push({ kind: "roots-button", items: ["roots"] })
+    if (rootsEditing) {
+      var rs = projects.roots
+      for (var ri = 0; ri < rs.length; ri++) rows.push({ kind: "root", items: [rs[ri]] })
+      rows.push({ kind: "root-add", items: ["add"] })
+      if (projects.browsing) {
+        rows.push({ kind: "browse-up", items: [".."] })
+        var es = projects.browseEntries
+        for (var ei = 0; ei < es.length; ei++) rows.push({ kind: "browse", items: [es[ei].path] })
+        rows.push({ kind: "browse-select", items: ["select"] })
+      }
+    }
     if (projectList.length > 1) rows.push({ kind: "project", items: projectList.map(function(q) { return projects.labelFor(q.path) }) })
     var artifactRows = []
     if (selectedChange && contentExpanded) {
@@ -136,6 +147,11 @@ Panel {
     var label = cursorLabel
     switch (item.kind) {
     case "roots-button": toggleRootsEditing(); break
+    case "root": if (projects.roots.length > 1) rootsError = removeRoot(label); break
+    case "root-add": if (projects.browsing) projects.closeBrowser(); else openBrowser(); break
+    case "browse-up": projects.browseUp(); browserScroll.restart(); break
+    case "browse": projects.browseTo(label); browserScroll.restart(); break
+    case "browse-select": rootsError = addRoot(projects.browseDir); break
     case "project": selectProject(cursorCol); break
     case "change": case "archived":
       // Re-activating the selected row folds it — unless a spec is showing,
@@ -348,21 +364,22 @@ Panel {
   property string rootsError: ""
 
   function toggleRootsEditing() {
-    if (rootsEditing) { rootsEditing = false; keyCatcher.forceActiveFocus(); return }
+    if (rootsEditing) { rootsEditing = false; projects.closeBrowser(); return }
     rootsError = ""
     rootsEditing = true
     projects.checkRoots(projects.roots)
-    Qt.callLater(function() { rootsField.text = root.setting("projectsRoot", "~/projects"); rootsField.forceActiveFocus() })
   }
 
-  function submitRoots() {
-    var reason = setRoots(rootsField.text)
-    rootsError = reason
-    // Stay open on any message — a refused value or an unpersisted one.
-    if (reason !== "") return
-    rootsEditing = false
-    keyCatcher.forceActiveFocus()
+  // The browser starts one level above the first root, so that root's
+  // siblings are the first thing on screen; without roots, at home.
+  function openBrowser() {
+    var home = Quickshell.env("HOME")
+    projects.browseTo(projects.roots.length > 0 ? Spectra.parentDir(projects.roots[0]) : home)
+    browserScroll.restart()
   }
+  // Once the browser rows exist, park the cursor on `..` so the keyboard
+  // continues inside the browser rather than wherever it was.
+  Timer { id: browserScroll; interval: 120; onTriggered: { root.setCursor("browse-up", ".."); root.scrollToCursor() } }
 
   function persistSettings(values) {
     var entry = { id: root.moduleName }
@@ -480,6 +497,7 @@ Panel {
     specsExpanded = false
     contentExpanded = true
     rootsEditing = false
+    projects.closeBrowser()
     placeCursorOnOpen()
     if (panelFlick) panelFlick.contentY = 0
     refreshNow()
@@ -672,7 +690,7 @@ Panel {
       anchors.fill: parent
       // The locale field and the cli dropdown own the keys while active;
       // otherwise typing "tw" would switch project on the "w"... and "r".
-      blocked: localeDropdown.popupOpen || cliDropdown.popupOpen || rootsField.activeFocus
+      blocked: localeDropdown.popupOpen || cliDropdown.popupOpen
 
       onMoveRequested: function(dx, dy) { root.moveCursor(dx, dy) }
       onActivateRequested: root.activateCursor()
@@ -681,8 +699,14 @@ Panel {
         if (blocked) return
         if (event.key === Qt.Key_PageDown) { root.pageScroll(1); event.accepted = true }
         else if (event.key === Qt.Key_PageUp) { root.pageScroll(-1); event.accepted = true }
+        else if (event.key === Qt.Key_Backspace && projects.browsing) { projects.browseUp(); event.accepted = true }
       }
-      onCloseRequested: root.close()
+      // Esc peels one layer at a time: browser, then roots list, then panel.
+      onCloseRequested: {
+        if (projects.browsing) projects.closeBrowser()
+        else if (root.rootsEditing) root.toggleRootsEditing()
+        else root.close()
+      }
       onTabRequested: function(direction) {
         if (root.selectedChangeName !== "") root.selectTab(root.artifactTabs.indexOf(root.selectedTab) + direction)
         else root.switchPanel(direction)
@@ -725,36 +749,137 @@ Panel {
             }
           }
 
-          // ---------- Project roots editor ----------
+          // ---------- Project roots: list + folder browser ----------
           Column {
             visible: root.rootsEditing
             width: parent.width
-            spacing: Style.space(4)
+            spacing: Style.space(6)
 
-            TextField {
-              id: rootsField
-              width: parent.width
-              placeholderText: "~/projects:~/work"
-              font.family: root.fontFamily
-              font.pixelSize: Style.font.body
+            Repeater {
+              model: root.rootsEditing ? projects.roots : []
+
+              Item {
+                required property var modelData
+                width: parent.width
+                implicitHeight: rootRow.implicitHeight
+
+                ListRow {
+                  id: rootRow
+                  anchors.left: parent.left
+                  anchors.right: removeButton.left
+                  anchors.rightMargin: Style.spacing.md
+                  text: Spectra.abbreviateHome(modelData, Quickshell.env("HOME"))
+                  trailing: projects.missingRoots.indexOf(modelData) >= 0 ? "找不到" : ""
+                  hasCursor: root.cursorAt("root", modelData)
+                  onHovered: root.setCursor("root", modelData)
+                  Component.onCompleted: root.registerCursorTarget("root", modelData, this)
+                  Component.onDestruction: root.unregisterCursorTarget("root", modelData, this)
+                }
+
+                Button {
+                  id: removeButton
+                  anchors.right: parent.right
+                  anchors.verticalCenter: parent.verticalCenter
+                  iconText: "󰅖"
+                  enabled: projects.roots.length > 1
+                  opacity: enabled ? 1.0 : 0.35
+                  foreground: root.foreground
+                  fontFamily: root.fontFamily
+                  horizontalPadding: Style.spacing.xs
+                  verticalPadding: Style.spacing.xxs
+                  onClicked: if (enabled) root.rootsError = root.removeRoot(modelData)
+                }
+              }
+            }
+
+            Button {
+              text: "+ 加入資料夾"
+              bordered: true
+              selected: projects.browsing
+              hasCursor: root.cursorAt("root-add", "add")
               foreground: root.foreground
-              onAccepted: root.submitRoots()
-              onTextEdited: root.rootsError = ""
-              Keys.onEscapePressed: root.toggleRootsEditing()
-              onActiveFocusChanged: if (!activeFocus && root.rootsEditing) projects.checkRoots(Spectra.splitRoots(text, Quickshell.env("HOME")))
+              fontFamily: root.fontFamily
+              fontSize: Style.font.bodySmall
+              onClicked: { root.setCursor("root-add", "add"); if (projects.browsing) projects.closeBrowser(); else root.openBrowser() }
+              onHovered: function(h) { if (h) root.setCursor("root-add", "add") }
+              Component.onCompleted: root.registerCursorTarget("root-add", "add", this)
+              Component.onDestruction: root.unregisterCursorTarget("root-add", "add", this)
+            }
+
+            // The browser: current folder, `..`, one row per subfolder, select.
+            Column {
+              visible: projects.browsing
+              width: parent.width
+              spacing: Style.space(6)
+
+              Text {
+                textFormat: Text.PlainText
+                width: parent.width
+                text: Spectra.abbreviateHome(projects.browseDir, Quickshell.env("HOME"))
+                color: root.foreground
+                font.family: root.fontFamily
+                font.pixelSize: Style.font.body
+                font.bold: true
+                elide: Text.ElideMiddle
+              }
+
+              ListRow {
+                width: parent.width
+                text: ".."
+                hasCursor: root.cursorAt("browse-up", "..")
+                onClicked: { root.setCursor("browse-up", ".."); projects.browseUp() }
+                onHovered: root.setCursor("browse-up", "..")
+                Component.onCompleted: root.registerCursorTarget("browse-up", "..", this)
+                Component.onDestruction: root.unregisterCursorTarget("browse-up", "..", this)
+              }
+
+              Repeater {
+                model: projects.browsing ? projects.browseEntries : []
+
+                ListRow {
+                  required property var modelData
+                  width: parent.width
+                  text: modelData.name + "/"
+                  trailing: modelData.hasSpectra ? "spectra" : ""
+                  // A folder holding a project reads in the foreground colour.
+                  textColor: modelData.hasSpectra ? root.foreground : root.dim
+                  hasCursor: root.cursorAt("browse", modelData.path)
+                  onClicked: { root.setCursor("browse", modelData.path); projects.browseTo(modelData.path) }
+                  onHovered: root.setCursor("browse", modelData.path)
+                  Component.onCompleted: root.registerCursorTarget("browse", modelData.path, this)
+                  Component.onDestruction: root.unregisterCursorTarget("browse", modelData.path, this)
+                }
+              }
+
+              Text {
+                visible: projects.browseError !== ""
+                textFormat: Text.PlainText
+                width: parent.width
+                text: projects.browseError
+                color: root.urgent
+                font.family: root.fontFamily
+                font.pixelSize: Style.font.caption
+              }
+
+              Button {
+                text: "選這個資料夾"
+                bordered: true
+                hasCursor: root.cursorAt("browse-select", "select")
+                foreground: root.foreground
+                fontFamily: root.fontFamily
+                fontSize: Style.font.bodySmall
+                onClicked: { root.setCursor("browse-select", "select"); root.rootsError = root.addRoot(projects.browseDir) }
+                onHovered: function(h) { if (h) root.setCursor("browse-select", "select") }
+                Component.onCompleted: root.registerCursorTarget("browse-select", "select", this)
+                Component.onDestruction: root.unregisterCursorTarget("browse-select", "select", this)
+              }
             }
 
             Text {
               visible: text !== ""
               textFormat: Text.PlainText
               width: parent.width
-              text: {
-                if (root.rootsError !== "") return root.rootsError
-                if (root.persistWarning !== "") return root.persistWarning
-                if (projects.missingRoots.length > 0)
-                  return "找不到 " + projects.missingRoots.map(function(r) { return Spectra.abbreviateHome(r, Quickshell.env("HOME")) }).join(", ")
-                return ""
-              }
+              text: root.rootsError !== "" ? root.rootsError : root.persistWarning
               color: root.rootsError !== "" ? root.urgent : root.dim
               font.family: root.fontFamily
               font.pixelSize: Style.font.caption
@@ -1451,6 +1576,7 @@ Panel {
     id: listRow
     property string text: ""
     property string trailing: ""
+    property color textColor: root.dim
     property bool selected: false
     property bool hasCursor: false
     signal clicked()
@@ -1481,7 +1607,7 @@ Panel {
       anchors.rightMargin: Style.spacing.sm
       anchors.verticalCenter: parent.verticalCenter
       text: listRow.text
-      color: root.dim
+      color: listRow.textColor
       font.family: root.fontFamily
       font.pixelSize: Style.font.body
       font.bold: listRow.selected
