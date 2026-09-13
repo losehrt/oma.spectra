@@ -258,3 +258,49 @@ function abbreviateHome(path, home) {
   if (home && (p === home || p.indexOf(home + "/") === 0)) return "~" + p.slice(home.length);
   return p;
 }
+
+// ---- folder browser / root list helpers -----------------------------------
+
+function parentDir(path) {
+  var p = String(path || "/").replace(/\/+$/, "");
+  if (p === "") return "/";
+  var i = p.lastIndexOf("/");
+  return i <= 0 ? "/" : p.slice(0, i);
+}
+
+// Two `find` listings separated by a `--` line: the subfolders of a folder,
+// then the `.spectra.yaml` files two levels down. Sorted by name.
+function parseBrowse(output) {
+  var parts = String(output || "").split(/^--$/m);
+  var dirs = String(parts[0] || "").split("\n");
+  var spectra = {};
+  var second = String(parts[1] || "").split("\n");
+  for (var i = 0; i < second.length; i++) {
+    var line = second[i].trim();
+    if (line !== "") spectra[parentDir(line)] = true;
+  }
+  var entries = [];
+  for (var j = 0; j < dirs.length; j++) {
+    var d = dirs[j].trim();
+    if (d === "") continue;
+    entries.push({ path: d, name: d.slice(d.lastIndexOf("/") + 1), hasSpectra: !!spectra[d] });
+  }
+  entries.sort(function(a, b) { return a.name < b.name ? -1 : a.name > b.name ? 1 : 0; });
+  return entries;
+}
+
+function addRoot(roots, path) {
+  var p = String(path || "").replace(/\/+$/, "") || "/";
+  return roots.indexOf(p) >= 0 ? roots.slice() : roots.concat([p]);
+}
+
+// Never empties the list: the last root stays.
+function removeRoot(roots, path) {
+  if (roots.length <= 1) return roots.slice();
+  return roots.filter(function(r) { return r !== path; });
+}
+
+// The stored form: `~`-abbreviated, `:`-joined.
+function joinRoots(roots, home) {
+  return roots.map(function(r) { return abbreviateHome(r, home); }).join(":");
+}

@@ -55,5 +55,16 @@ check("labels: spec example values", labelProjects([{ id: "/home/u/projects/foo"
 check("labels: same root basename", labelProjects([{ id: "/h/work/src/foo", name: "foo" }, { id: "/h/oss/src/foo", name: "foo" }]).map(function(r) { return r.label; }), ["oss/src/foo", "work/src/foo"]);
 check("abbreviateHome", [abbreviateHome("/home/u/x", "/home/u"), abbreviateHome("/opt/x", "/home/u")], ["~/x", "/opt/x"]);
 
+// folder browser / root list
+check("parentDir", [parentDir("/a/b"), parentDir("/a"), parentDir("/"), parentDir("/a/b/")], ["/a", "/", "/", "/a"]);
+var browse = parseBrowse("/T/plain\n/T/pa\n--\n/T/pa/.spectra.yaml\n");
+check("parseBrowse", browse.map(function(e) { return e.name + ":" + e.hasSpectra; }), ["pa:true", "plain:false"]);
+check("parseBrowse empty", parseBrowse("--\n"), []);
+check("addRoot dedupes", addRoot(["/a"], "/a/"), ["/a"]);
+check("addRoot appends", addRoot(["/a"], "/b"), ["/a", "/b"]);
+check("removeRoot keeps last", removeRoot(["/a"], "/a"), ["/a"]);
+check("removeRoot", removeRoot(["/a", "/b"], "/b"), ["/a"]);
+check("joinRoots", joinRoots(["/home/u/projects", "/home/u/work"], "/home/u"), "~/projects:~/work");
+
 console.log(failures === 0 ? "all passed" : failures + " failed");
 process.exit(failures === 0 ? 0 : 1);
