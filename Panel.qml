@@ -149,8 +149,8 @@ Panel {
     case "roots-button": toggleRootsEditing(); break
     case "root": if (projects.roots.length > 1) rootsError = removeRoot(label); break
     case "root-add": if (projects.browsing) projects.closeBrowser(); else openBrowser(); break
-    case "browse-up": projects.browseUp(); browserScroll.restart(); break
-    case "browse": projects.browseTo(label); browserScroll.restart(); break
+    case "browse-up": projects.browseUp(); parkOnBrowser(); break
+    case "browse": projects.browseTo(label); parkOnBrowser(); break
     case "browse-select": rootsError = addRoot(projects.browseDir); break
     case "project": selectProject(cursorCol); break
     case "change": case "archived":
@@ -375,11 +375,15 @@ Panel {
   function openBrowser() {
     var home = Quickshell.env("HOME")
     projects.browseTo(projects.roots.length > 0 ? Spectra.parentDir(projects.roots[0]) : home)
+    parkOnBrowser()
+  }
+  // The browser rows exist as soon as `browsing` flips, so the cursor moves
+  // now; only the scroll waits for the delegates to register.
+  function parkOnBrowser() {
+    setCursor("browse-up", "..")
     browserScroll.restart()
   }
-  // Once the browser rows exist, park the cursor on `..` so the keyboard
-  // continues inside the browser rather than wherever it was.
-  Timer { id: browserScroll; interval: 120; onTriggered: { root.setCursor("browse-up", ".."); root.scrollToCursor() } }
+  Timer { id: browserScroll; interval: 120; onTriggered: if (root.cursorKind.indexOf("browse") === 0) root.scrollToCursor() }
 
   function persistSettings(values) {
     var entry = { id: root.moduleName }
@@ -397,6 +401,7 @@ Panel {
 
   // Root-list edits go through the same persistence as setRoots.
   function addRoot(path) {
+    if (String(path || "").trim() === "") return "沒有指定資料夾"
     var next = Spectra.addRoot(projects.roots, path)
     if (next.length !== projects.roots.length) persistSettings({ projectsRoot: Spectra.joinRoots(next, Quickshell.env("HOME")) })
     projects.closeBrowser()
@@ -558,7 +563,11 @@ Panel {
     }
     function browse(target: string): string {
       if (target === "..") { projects.browseUp(); return "ok" }
-      if (target === "select") return root.addRoot(projects.browseDir) === "" ? "ok" : root.addRoot(projects.browseDir)
+      if (target === "select") {
+        if (!projects.browsing) return "瀏覽器沒有開啟"
+        var reason = root.addRoot(projects.browseDir)
+        return reason === "" ? "ok" : reason
+      }
       if (target === "close") { projects.closeBrowser(); return "ok" }
       projects.browseTo(Spectra.expandHome(target, Quickshell.env("HOME")))
       return "ok"

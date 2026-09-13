@@ -141,7 +141,9 @@ Scope {
     browseError = ""
     browseEntries = []
     browseProcess.command = ["sh", "-c",
-      'find -L "$1" -mindepth 1 -maxdepth 1 -type d ! -name ".*" && echo -- && find -L "$1" -mindepth 2 -maxdepth 2 -name .spectra.yaml 2>/dev/null',
+      // Only the folder listing decides readability; the project-marker
+      // scan may partly fail (a root-owned child, a symlink loop) harmlessly.
+      'find -L "$1" -mindepth 1 -maxdepth 1 -type d ! -name ".*" 2>/dev/null || exit 1; echo --; find -L "$1" -mindepth 2 -maxdepth 2 -name .spectra.yaml 2>/dev/null; exit 0',
       "sh", d]
     browseProcess.running = true
   }
