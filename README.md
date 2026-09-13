@@ -26,6 +26,10 @@ and projects initialised by it record `cli_command: spxa`:
 npm install -g @kaochenlong/spxa
 ```
 
+Run `omarchy plugin validate` and the other `omarchy plugin` commands on the
+real path `~/.config/omarchy/plugins/oma.spectra`; the validator refuses a
+symlink as the starting point.
+
 A key binding for the panel goes in `~/.config/hypr/bindings.lua`:
 
 ```lua
