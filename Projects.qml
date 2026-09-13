@@ -34,7 +34,8 @@ Scope {
   Process {
     id: findProcess
     running: false
-    command: ["find", root.rootPath, "-mindepth", "2", "-maxdepth", "2", "-name", ".spectra.yaml"]
+    // -L: a symlinked project directory counts like a real one.
+    command: ["find", "-L", root.rootPath, "-mindepth", "2", "-maxdepth", "2", "-name", ".spectra.yaml"]
     stdout: StdioCollector { waitForEnd: true }
     stderr: StdioCollector { waitForEnd: true }
     onExited: function(exitCode, exitStatus) {
