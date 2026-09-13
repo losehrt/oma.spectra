@@ -67,7 +67,9 @@ check("removeRoot", removeRoot(["/a", "/b"], "/b"), ["/a"]);
 check("joinRoots", joinRoots(["/home/u/projects", "/home/u/work"], "/home/u"), "~/projects:~/work");
 
 // CLI invocation
-check("cliCommand", cliCommand("spxa", ["list", "--json"]), ["bash", "-lc", 'exec "$@"', "bash", "spxa", "list", "--json"]);
+check("cliCommand", cliCommand("spxa", ["list", "--json"], "/p"), ["bash", "-lc", 'cd -- "$1" && shift && exec "$@"', "bash", "/p", "spxa", "list", "--json"]);
+check("isCliNotFound bash", isCliNotFound(127, "bash: line 1: exec: spxa: not found", "spxa"), true);
+check("isCliNotFound interpreter", isCliNotFound(127, "env: 'node': No such file or directory", "spxa"), false);
 check("startFailureMessage", startFailureMessage("specx"), "specx could not be found, even through the login shell");
 
 console.log(failures === 0 ? "all passed" : failures + " failed");

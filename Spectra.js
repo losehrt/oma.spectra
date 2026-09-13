@@ -311,12 +311,20 @@ function joinRoots(roots, home) {
 // by mise/nvm may be invisible to it. Run through the user's login shell the
 // way Omarchy's own Util.execArgv does: `exec` replaces bash, and the command
 // plus arguments ride in argv so nothing is re-parsed by the shell.
-function cliCommand(cli, args) {
-  return ["bash", "-lc", 'exec "$@"', "bash", cli].concat(args || []);
+// `cwd` is pinned inside the shell string so a profile that does `cd`
+// cannot move the command out of the project.
+function cliCommand(cli, args, cwd) {
+  return ["bash", "-lc", 'cd -- "$1" && shift && exec "$@"', "bash", cwd || ".", cli].concat(args || []);
 }
 
 // bash answers 127 when `exec` finds nothing; the same wording covers a bash
 // that could not start at all.
 function startFailureMessage(cli) {
   return cli + " could not be found, even through the login shell";
+}
+
+// True only for bash's own "not found" — a 127 from the CLI's interpreter
+// (`env: 'node': No such file`) keeps its real stderr line instead.
+function isCliNotFound(exitCode, stderr, cli) {
+  return exitCode === 127 && new RegExp("exec: " + cli.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + ": not found").test(String(stderr || ""));
 }
