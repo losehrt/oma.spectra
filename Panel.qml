@@ -562,6 +562,8 @@ Panel {
       return reason === "" ? "ok" : reason
     }
     function browse(target: string): string {
+      // The browser lives inside the roots list; open it if it is closed.
+      if (!root.rootsEditing && target !== "close") root.toggleRootsEditing()
       if (target === "..") { projects.browseUp(); return "ok" }
       if (target === "select") {
         if (!projects.browsing) return "瀏覽器沒有開啟"
