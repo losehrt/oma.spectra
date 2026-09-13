@@ -699,6 +699,7 @@ Panel {
               font.pixelSize: Style.font.body
               foreground: root.foreground
               onAccepted: root.submitRoots()
+              onTextEdited: root.rootsError = ""
               Keys.onEscapePressed: root.toggleRootsEditing()
               onActiveFocusChanged: if (!activeFocus && root.rootsEditing) projects.checkRoots(Spectra.splitRoots(text, Quickshell.env("HOME")))
             }

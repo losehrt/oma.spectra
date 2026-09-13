@@ -92,8 +92,12 @@ Scope {
   // per check; the paths ride in argv so no shell string sees them.
   property var missingRoots: []
 
+  // A check requested while one runs is kept and run afterwards, so the
+  // hint always reflects the last list asked about.
+  property var pendingCheck: null
+
   function checkRoots(list) {
-    if (checkProcess.running) return
+    if (checkProcess.running) { pendingCheck = list; return }
     checkProcess.command = ["sh", "-c", 'for d in "$@"; do [ -d "$d" ] || printf "%s\n" "$d"; done', "sh"].concat(list)
     checkProcess.running = true
   }
@@ -105,6 +109,7 @@ Scope {
     onExited: function(exitCode, exitStatus) {
       Qt.callLater(function() {
         root.missingRoots = String(checkProcess.stdout.text).split("\n").filter(function(l) { return l.trim() !== "" })
+        if (root.pendingCheck !== null) { var next = root.pendingCheck; root.pendingCheck = null; root.checkRoots(next) }
       })
     }
   }
