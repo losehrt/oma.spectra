@@ -118,7 +118,8 @@ selection and the content area are cleared.
 ### Keys
 
 A keyboard cursor walks every clickable item in visual order: the folder
-button, project chips,
+button and, while its list is open, each root row, `+ 加入資料夾` and the
+browser rows, then project chips,
 change rows, the ARCHIVED header and its rows, the artifact tabs, delta spec
 chips, the SPECS header and its rows, the SETTINGS header and its rows, the
 update button. The panel scrolls to keep the cursor visible; hovering an item with
@@ -130,9 +131,10 @@ the mouse moves the cursor there too.
 | `→` / `l`, `←` / `h` | next / previous item in the row (on the project row this also switches the project) |
 | `Enter` / `Space` | activate: select, expand or fold a header, flip a switch, open a dropdown, run the update |
 | `PageDown` / `PageUp` | scroll the panel by 80% of its height |
+| `Backspace` | go up one folder while the folder browser is open |
 | `Tab` / `Shift+Tab` | next / previous artifact tab (wraps) |
 | `r` | rescan projects, re-read each `.spectra.yaml`, reload every change list, the selected change's status and the open file |
-| `Esc` | close |
+| `Esc` | close the folder browser, then the roots list, then the panel |
 
 Data loads when the panel opens and on `r`; nothing runs while it is closed.
 
@@ -143,13 +145,18 @@ Data loads when the panel opens and on `r`; nothing runs while it is closed.
 | `projectsRoot` | string | `~/projects` | One or more folders separated by `:` (e.g. `~/projects:~/work`); their **direct** subfolders are scanned for `.spectra.yaml`. `~` is expanded per folder, a folder that does not exist is skipped. When two folders hold a project of the same name the chips read `<folder>/<name>` (`projects/foo`, `work/foo`). |
 
 Set it from the panel: the folder button beside the project name (and beside
-the `No Spectra projects under …` line) opens a field pre-filled with the
-current value; `Enter` writes it into this widget's entry in
-`~/.config/omarchy/shell.json` and rescans, `Esc` cancels. Folders that do
-not exist are listed under the field as `找不到 …` but can still be saved.
-You can also set it inline in the bar layout entry
-(`{ "id": "oma.spectra", "projectsRoot": "~/code" }`) or through the shell's
-widget settings.
+the `No Spectra projects under …` line) opens the list of root folders —
+one row each, `找不到` on a folder that does not exist, `✕` to remove (the
+last one cannot be removed) — followed by `+ 加入資料夾`. That opens a small
+folder browser: the current folder, `..`, one row per subfolder (folders
+that hold a Spectra project read in the normal colour and are marked
+`spectra`, the rest are dimmed) and `選這個資料夾`, which adds the current
+folder. Every change is written into this widget's entry in
+`~/.config/omarchy/shell.json` at once and the projects are rescanned. Pick
+the folder *above* your projects, not a project itself. You can also set
+the value inline in the bar layout entry
+(`{ "id": "oma.spectra", "projectsRoot": "~/code:~/work" }`) or through the
+shell's widget settings.
 
 Each project's `.spectra.yaml` supplies `cli_command` (one of `spectra`,
 `specx`, `spxa`; default `spectra`) and `spec_dir` (default `openspec`).
@@ -163,7 +170,8 @@ on the login-session PATH the shell was started with.
 `next`, `project <name>`, `select <change>`, `tab <proposal|design|specs|tasks>`,
 `spec <capability>`, `terminal`, `settings <show|hide|toggle>` (fold or
 expand the settings section), `archived <show|hide|toggle>`, `specs <show|hide|toggle>`, `content <show|hide|toggle>`,
-`roots <show|hide|toggle>` (the project-roots field), `setRoots <value>` (answers `ok` or the reason),
+`roots <show|hide|toggle>` (the project-roots list), `setRoots <value>`, `addRoot <path>`,
+`removeRoot <path>`, `browse <path|..|select|close>` (each answers `ok` or the reason),
 `cursor <down|up|left|right|activate>`, `setSetting <key> <value>` (answers `ok` or
 the reason the value was refused), `update` (answers `started` or why not),
 `state` (JSON of what is open and selected, the cursor position and row
