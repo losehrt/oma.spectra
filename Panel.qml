@@ -378,6 +378,26 @@ Panel {
     }
   }
 
+  // Root-list edits go through the same persistence as setRoots.
+  function addRoot(path) {
+    var next = Spectra.addRoot(projects.roots, path)
+    if (next.length !== projects.roots.length) persistSettings({ projectsRoot: Spectra.joinRoots(next, Quickshell.env("HOME")) })
+    projects.closeBrowser()
+    projects.checkRoots(next)
+    projects.refreshAll()
+    return persistWarning
+  }
+
+  function removeRoot(path) {
+    if (projects.roots.length <= 1) return "至少要一個資料夾"
+    var next = Spectra.removeRoot(projects.roots, path)
+    if (next.length === projects.roots.length) return "不在清單裡: " + path
+    persistSettings({ projectsRoot: Spectra.joinRoots(next, Quickshell.env("HOME")) })
+    projects.checkRoots(next)
+    projects.refreshAll()
+    return persistWarning
+  }
+
   // "" on success, otherwise the reason shown under the field. A value that
   // applied but could not be written to shell.json reports that as well, so
   // neither the field nor an IPC caller mistakes it for a persisted change.
@@ -510,6 +530,21 @@ Panel {
       else return "unknown action: " + action + " (show|hide|toggle)"
       return "ok"
     }
+    function addRoot(path: string): string {
+      var reason = root.addRoot(Spectra.expandHome(path, Quickshell.env("HOME")))
+      return reason === "" ? "ok" : reason
+    }
+    function removeRoot(path: string): string {
+      var reason = root.removeRoot(Spectra.expandHome(path, Quickshell.env("HOME")))
+      return reason === "" ? "ok" : reason
+    }
+    function browse(target: string): string {
+      if (target === "..") { projects.browseUp(); return "ok" }
+      if (target === "select") return root.addRoot(projects.browseDir) === "" ? "ok" : root.addRoot(projects.browseDir)
+      if (target === "close") { projects.closeBrowser(); return "ok" }
+      projects.browseTo(Spectra.expandHome(target, Quickshell.env("HOME")))
+      return "ok"
+    }
     function setRoots(value: string): string {
       var reason = root.setRoots(value)
       return reason === "" ? "ok" : reason
@@ -565,6 +600,8 @@ Panel {
         archived: p ? p.archived.map(function(c) { return c.key }) : [], archivedExpanded: root.archivedExpanded,
         specsExpanded: root.specsExpanded, contentExpanded: root.contentExpanded, contentPath: root.contentPath,
         missingRoots: projects.missingRoots, persistWarning: root.persistWarning, rootsEditing: root.rootsEditing,
+        browsing: projects.browsing, browseDir: projects.browseDir, browseError: projects.browseError,
+        browseEntries: projects.browseEntries.map(function(e) { return e.name + (e.hasSpectra ? "*" : "") }),
         cursor: { row: root.cursorRow, col: root.cursorCol, kind: root.cursorKind, label: root.cursorLabel },
         targets: Object.keys(root.cursorTargets).length,
         rows: root.cursorRows.map(function(r) { return r.kind + (r.items.length > 1 ? "(" + r.items.length + ")" : "") }),

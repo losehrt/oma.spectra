@@ -121,6 +121,56 @@ Scope {
     }
   }
 
+  // ---- folder browser ----------------------------------------------------
+  //
+  // One level at a time: the subfolders of `browseDir` and which of them hold
+  // a `.spectra.yaml` one level down, from a single `sh` (paths ride in argv).
+
+  property bool browsing: false
+  property string browseDir: ""
+  property var browseEntries: []
+  property string browseError: ""
+  property string browseQueued: ""
+
+  function browseTo(dir) {
+    var d = String(dir || "").replace(/\/+$/, "") || "/"
+    browsing = true
+    if (browseProcess.running) { browseQueued = d; return }
+    browseDir = d
+    browseError = ""
+    browseProcess.command = ["sh", "-c",
+      'find -L "$1" -mindepth 1 -maxdepth 1 -type d ! -name ".*" && echo -- && find -L "$1" -mindepth 2 -maxdepth 2 -name .spectra.yaml 2>/dev/null',
+      "sh", d]
+    browseProcess.running = true
+  }
+
+  function browseUp() { browseTo(Spectra.parentDir(browseDir)) }
+
+  function closeBrowser() {
+    browsing = false
+    browseEntries = []
+    browseError = ""
+  }
+
+  Process {
+    id: browseProcess
+    running: false
+    stdout: StdioCollector { waitForEnd: true }
+    stderr: StdioCollector { waitForEnd: true }
+    onExited: function(exitCode, exitStatus) {
+      Qt.callLater(function() {
+        if (exitCode === 0) {
+          root.browseEntries = Spectra.parseBrowse(browseProcess.stdout.text)
+          root.browseError = ""
+        } else {
+          root.browseEntries = []
+          root.browseError = "無法讀取"
+        }
+        if (root.browseQueued !== "") { var next = root.browseQueued; root.browseQueued = ""; root.browseTo(next) }
+      })
+    }
+  }
+
   // Chip label for a project path: its name, or `<root>/<name>` on a clash.
   function labelFor(path) {
     if (!path) return ""
