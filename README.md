@@ -137,7 +137,7 @@ Data loads when the panel opens and on `r`; nothing runs while it is closed.
 
 | Key | Type | Default | Meaning |
 | --- | --- | --- | --- |
-| `projectsRoot` | path | `~/projects` | Folder whose **direct** subfolders are scanned for `.spectra.yaml`. `~` is expanded. |
+| `projectsRoot` | string | `~/projects` | One or more folders separated by `:` (e.g. `~/projects:~/work`); their **direct** subfolders are scanned for `.spectra.yaml`. `~` is expanded per folder, a folder that does not exist is skipped. When two folders hold a project of the same name the chips read `<folder>/<name>` (`projects/foo`, `work/foo`). |
 
 Set it inline in the bar layout entry (`{ "id": "oma.spectra", "projectsRoot": "~/code" }`)
 or through the shell's widget settings.
@@ -157,8 +157,10 @@ expand the settings section), `archived <show|hide|toggle>`, `specs <show|hide|t
 `cursor <down|up|left|right|activate>`, `setSetting <key> <value>` (answers `ok` or
 the reason the value was refused), `update` (answers `started` or why not),
 `state` (JSON of what is open and selected, the cursor position and row
-sequence, the archived names, plus the active project's settings, list error
-and update result).
+sequence, the archived names, the scanned roots, plus the active project's
+settings, list error and update result). `project <name>` accepts a chip
+label or a bare name and answers `ambiguous: …` when the bare name matches
+more than one project.
 
 `select` opens the panel, switches to whichever project lists that change,
 and answers `pending` when the change lists are still loading (it applies as
@@ -174,7 +176,7 @@ soon as they land).
 - Syntax highlighting inside code blocks and rendering of Mermaid diagrams
   (both show as plain monospace text).
 - Watching files for live updates.
-- Nested project discovery (only direct children of `projectsRoot`).
+- Nested project discovery (only direct children of each root folder).
 - Task progress for archived changes (they show no bar), and searching or
   filtering the archive.
 
