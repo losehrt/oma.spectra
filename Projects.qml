@@ -56,7 +56,12 @@ Scope {
     scanned = true
     if (refreshAfterScan) {
       refreshAfterScan = false
-      for (var i = 0; i < projects.length; i++) projects[i].refresh()
+      // Read the live objects: a rescan that dropped projects leaves stale
+      // entries in `projects` until the Instantiator has settled.
+      for (var i = 0; i < instantiator.count; i++) {
+        var obj = instantiator.objectAt(i)
+        if (obj && typeof obj.refresh === "function") obj.refresh()
+      }
     }
   }
 
@@ -69,13 +74,17 @@ Scope {
       path: modelData.id
     }
 
-    onObjectAdded: root.syncProjects()
-    onObjectRemoved: root.syncProjects()
+    // Add/remove arrive one object at a time; rebuild once the batch settles.
+    onObjectAdded: Qt.callLater(root.syncProjects)
+    onObjectRemoved: Qt.callLater(root.syncProjects)
   }
 
   function syncProjects() {
     var list = []
-    for (var i = 0; i < instantiator.count; i++) list.push(instantiator.objectAt(i))
+    for (var i = 0; i < instantiator.count; i++) {
+      var obj = instantiator.objectAt(i)
+      if (obj) list.push(obj)
+    }
     projects = list
   }
 
@@ -102,6 +111,7 @@ Scope {
 
   // Chip label for a project path: its name, or `<root>/<name>` on a clash.
   function labelFor(path) {
+    if (!path) return ""
     for (var i = 0; i < records.length; i++)
       if (records[i].id === path) return records[i].label
     return path.slice(path.lastIndexOf("/") + 1)

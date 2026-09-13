@@ -45,6 +45,7 @@ Panel {
   readonly property var cursorRows: {
     var rows = []
     var p = project
+    rows.push({ kind: "roots-button", items: ["roots"] })
     if (projectList.length > 1) rows.push({ kind: "project", items: projectList.map(function(q) { return projects.labelFor(q.path) }) })
     var artifactRows = []
     if (selectedChange && contentExpanded) {
@@ -134,6 +135,7 @@ Panel {
     cursorActive = true
     var label = cursorLabel
     switch (item.kind) {
+    case "roots-button": toggleRootsEditing(); break
     case "project": selectProject(cursorCol); break
     case "change": case "archived":
       // Re-activating the selected row folds it — unless a spec is showing,
@@ -192,9 +194,10 @@ Panel {
   // the first row when there is only one project.
   function placeCursorOnOpen() {
     cursorActive = true
-    cursorRow = 0
-    cursorCol = cursorRows.length > 0 && cursorRows[0].kind === "project" ? projectIndex : 0
-    var settled = cursorRows.length > 0 && (cursorRows[0].kind === "project" || cursorRows[0].kind === "change")
+    // Row 0 is the roots button; land on the project row or the first change.
+    cursorRow = cursorRows.length > 1 ? 1 : 0
+    cursorCol = cursorRows.length > 1 && cursorRows[1].kind === "project" ? projectIndex : 0
+    var settled = cursorRows.length > 1 && (cursorRows[1].kind === "project" || cursorRows[1].kind === "change")
     cursorPlacementPending = !settled
     if (!settled) cursorPlacementTimeout.restart()
   }
@@ -340,6 +343,26 @@ Panel {
   // which writes shell.json and pushes the same values back to the widget.
   property string persistWarning: ""
 
+  // The project-roots editor under the hero.
+  property bool rootsEditing: false
+  property string rootsError: ""
+
+  function toggleRootsEditing() {
+    if (rootsEditing) { rootsEditing = false; keyCatcher.forceActiveFocus(); return }
+    rootsError = ""
+    rootsEditing = true
+    projects.checkRoots(projects.roots)
+    Qt.callLater(function() { rootsField.text = root.setting("projectsRoot", "~/projects"); rootsField.forceActiveFocus() })
+  }
+
+  function submitRoots() {
+    var reason = setRoots(rootsField.text)
+    rootsError = reason
+    if (reason !== "") return
+    rootsEditing = false
+    keyCatcher.forceActiveFocus()
+  }
+
   function persistSettings(values) {
     var entry = { id: root.moduleName }
     for (var existing in root.settings) if (existing !== "id") entry[existing] = root.settings[existing]
@@ -433,6 +456,7 @@ Panel {
     archivedExpanded = false
     specsExpanded = false
     contentExpanded = true
+    rootsEditing = false
     placeCursorOnOpen()
     if (panelFlick) panelFlick.contentY = 0
     refreshNow()
@@ -473,6 +497,13 @@ Panel {
       if (action === "show") root.contentExpanded = true
       else if (action === "hide") root.contentExpanded = false
       else if (action === "toggle") root.contentExpanded = !root.contentExpanded
+      else return "unknown action: " + action + " (show|hide|toggle)"
+      return "ok"
+    }
+    function roots(action: string): string {
+      if (action === "show") { if (!root.rootsEditing) root.toggleRootsEditing() }
+      else if (action === "hide") { if (root.rootsEditing) root.toggleRootsEditing() }
+      else if (action === "toggle") root.toggleRootsEditing()
       else return "unknown action: " + action + " (show|hide|toggle)"
       return "ok"
     }
@@ -530,7 +561,7 @@ Panel {
         changes: p ? p.changes.map(function(c) { return c.name + (c.parked ? " (parked)" : "") }) : [],
         archived: p ? p.archived.map(function(c) { return c.key }) : [], archivedExpanded: root.archivedExpanded,
         specsExpanded: root.specsExpanded, contentExpanded: root.contentExpanded, contentPath: root.contentPath,
-        missingRoots: projects.missingRoots, persistWarning: root.persistWarning,
+        missingRoots: projects.missingRoots, persistWarning: root.persistWarning, rootsEditing: root.rootsEditing,
         cursor: { row: root.cursorRow, col: root.cursorCol, kind: root.cursorKind, label: root.cursorLabel },
         targets: Object.keys(root.cursorTargets).length,
         rows: root.cursorRows.map(function(r) { return r.kind + (r.items.length > 1 ? "(" + r.items.length + ")" : "") }),
@@ -601,7 +632,7 @@ Panel {
       anchors.fill: parent
       // The locale field and the cli dropdown own the keys while active;
       // otherwise typing "tw" would switch project on the "w"... and "r".
-      blocked: localeDropdown.popupOpen || cliDropdown.popupOpen
+      blocked: localeDropdown.popupOpen || cliDropdown.popupOpen || rootsField.activeFocus
 
       onMoveRequested: function(dx, dy) { root.moveCursor(dx, dy) }
       onActivateRequested: root.activateCursor()
@@ -641,6 +672,7 @@ Panel {
             meta: root.project ? projects.labelFor(root.project.path) : ""
             foreground: root.foreground
             fontFamily: root.fontFamily
+            trailingControl: Component { RootsButton {} }
             iconComponent: Component {
               Image {
                 source: Qt.resolvedUrl("assets/spectra.png")
@@ -650,6 +682,42 @@ Panel {
                 fillMode: Image.PreserveAspectFit
                 smooth: true
               }
+            }
+          }
+
+          // ---------- Project roots editor ----------
+          Column {
+            visible: root.rootsEditing
+            width: parent.width
+            spacing: Style.space(4)
+
+            TextField {
+              id: rootsField
+              width: parent.width
+              placeholderText: "~/projects:~/work"
+              font.family: root.fontFamily
+              font.pixelSize: Style.font.body
+              foreground: root.foreground
+              onAccepted: root.submitRoots()
+              Keys.onEscapePressed: root.toggleRootsEditing()
+              onActiveFocusChanged: if (!activeFocus && root.rootsEditing) projects.checkRoots(Spectra.splitRoots(text, Quickshell.env("HOME")))
+            }
+
+            Text {
+              visible: text !== ""
+              textFormat: Text.PlainText
+              width: parent.width
+              text: {
+                if (root.rootsError !== "") return root.rootsError
+                if (root.persistWarning !== "") return root.persistWarning
+                if (projects.missingRoots.length > 0)
+                  return "找不到 " + projects.missingRoots.map(function(r) { return Spectra.abbreviateHome(r, Quickshell.env("HOME")) }).join(", ")
+                return ""
+              }
+              color: root.rootsError !== "" ? root.urgent : root.dim
+              font.family: root.fontFamily
+              font.pixelSize: Style.font.caption
+              wrapMode: Text.WordWrap
             }
           }
 
@@ -690,15 +758,31 @@ Panel {
           }
 
           // ---------- Empty root ----------
-          Text {
+          Item {
             visible: projects.scanned && root.projectList.length === 0
-            textFormat: Text.PlainText
             width: parent.width
-            text: "No Spectra projects under " + projects.roots.map(function(r) { return Spectra.abbreviateHome(r, Quickshell.env("HOME")) }).join(", ")
-            color: root.dim
-            font.family: root.fontFamily
-            font.pixelSize: Style.font.body
-            wrapMode: Text.WordWrap
+            implicitHeight: Math.max(emptyText.implicitHeight, emptyButton.implicitHeight)
+
+            Text {
+              id: emptyText
+              textFormat: Text.PlainText
+              anchors.left: parent.left
+              anchors.right: emptyButton.left
+              anchors.rightMargin: Style.spacing.md
+              anchors.verticalCenter: parent.verticalCenter
+              text: "No Spectra projects under " + projects.roots.map(function(r) { return Spectra.abbreviateHome(r, Quickshell.env("HOME")) }).join(", ")
+              color: root.dim
+              font.family: root.fontFamily
+              font.pixelSize: Style.font.body
+              wrapMode: Text.WordWrap
+            }
+
+            RootsButton {
+              id: emptyButton
+              registers: false
+              anchors.right: parent.right
+              anchors.verticalCenter: parent.verticalCenter
+            }
           }
 
           // ---------- Changes ----------
@@ -1301,6 +1385,23 @@ Panel {
         }
       }
     }
+  }
+
+  // The folder button that opens the project-roots editor. Two instances
+  // (hero, empty state) share one cursor target; only the hero one registers.
+  component RootsButton: Button {
+    property bool registers: true
+    iconText: "󰉋"
+    tooltipText: "Projects folders"
+    bordered: true
+    foreground: root.foreground
+    fontFamily: root.fontFamily
+    horizontalPadding: Style.spacing.controlPaddingY
+    hasCursor: root.cursorAt("roots-button", "roots")
+    onClicked: { root.setCursor("roots-button", "roots"); root.toggleRootsEditing() }
+    onHovered: function(h) { if (h) root.setCursor("roots-button", "roots") }
+    Component.onCompleted: if (registers) root.registerCursorTarget("roots-button", "roots", this)
+    Component.onDestruction: if (registers) root.unregisterCursorTarget("roots-button", "roots", this)
   }
 
   // One dimmed list row: text on the left, a trailing word on the right, a
