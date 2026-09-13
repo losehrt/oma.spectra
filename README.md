@@ -61,6 +61,37 @@ the update button. Everything it shows is read from files and from
 `<cli> list` / `<cli> status`. Like every Omarchy plugin it runs unsandboxed
 inside the shell, so read the code before enabling it.
 
+## Uninstall
+
+```sh
+omarchy plugin remove oma.spectra
+```
+
+That deletes `~/.config/omarchy/plugins/oma.spectra` and takes the icon out
+of the bar. Two things it does not touch, because you added them by hand:
+the `o.bind(... "omarchy-shell shell toggle oma.spectra")` line in
+`~/.config/hypr/bindings.lua`, and the `{ "id": "oma.spectra", ... }` entry
+that the bar wrote into `~/.config/omarchy/shell.json` when you set the
+projects folders — delete both if you want no trace left. The plugin never
+changed anything else on the machine, so nothing else needs cleaning up.
+
+## Dependencies
+
+- The Spectra CLI — `spxa` from the npm package `@kaochenlong/spxa`, or
+  whatever `cli_command` a project's `.spectra.yaml` names (`spectra`,
+  `specx` or `spxa`). Without it the panel still lists projects but every
+  project shows `<cli> could not be found`.
+- `bash` as your login shell: the CLI runs through `bash -l` so that
+  version managers on the login PATH are found.
+- The Omarchy shell itself (Quickshell, `omarchy-shell`), which loads the
+  plugin; there is no other runtime, service or package.
+
+No sudo or pkexec is required. Nothing is downloaded at runtime; the only
+network access is `omarchy plugin add` / `update` cloning this repository.
+Once the plugin is listed on the Omarchy Plugin Marketplace, each new
+version is re-verified there through the marketplace's plugin verification
+form; `omarchy plugin update` still pulls it straight from this repository.
+
 ## Bar
 
 The icon is the Spectra mark from https://spectra.5xcamp.us/ (`assets/spectra.svg`,
