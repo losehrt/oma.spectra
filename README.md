@@ -26,22 +26,22 @@ and projects initialised by it record `cli_command: spxa`:
 npm install -g @kaochenlong/spxa
 ```
 
-The shell is started by Hyprland, not by your terminal, so it only sees the
-login-session PATH. If node comes from mise, nvm, asdf or similar, `spxa`
-lives in a directory your `.bashrc`/`.zshrc` adds — the panel then reports
-`spxa could not be started (is it on the shell's PATH?)` for every project
-and the update button fails the same way. Put that directory on the session
-PATH once and log out and back in:
+The panel runs the CLI through your login shell (`bash -l`), so a `spxa`
+installed by mise, nvm or asdf is found as long as your `~/.profile` /
+`~/.bash_profile` sets it up — the usual case. If a project still shows
+`spxa could not be found, even through the login shell`, check what the
+login shell sees:
 
 ```sh
-# mise
-mkdir -p ~/.config/environment.d
-printf 'PATH=%s/.local/share/mise/shims:$PATH\n' "$HOME" > ~/.config/environment.d/mise.conf
-# nvm: use $HOME/.nvm/versions/node/<version>/bin instead of the shims folder
+bash -lc 'command -v spxa'
 ```
 
-Check with `omarchy-shell oma.spectra state | jq .listError` — it should be
-empty after the next login.
+Nothing printed means the PATH entry only exists in the interactive part of
+your `.bashrc`; move the tool's activation to `~/.profile`, or put the
+directory on the session PATH once (`~/.config/environment.d/mise.conf`
+with `PATH=$HOME/.local/share/mise/shims:$PATH`) and log in again. Keep the
+login profile quiet: anything it prints ends up in the CLI's output and
+breaks the JSON the panel reads.
 
 Run `omarchy plugin validate` and the other `omarchy plugin` commands on the
 real path `~/.config/omarchy/plugins/oma.spectra`; the validator refuses a
