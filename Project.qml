@@ -172,6 +172,8 @@ Scope {
   }
 
   function listingResult(exitCode, out, err) {
+    // 127: bash's `exec` found no such command.
+    if (exitCode === 127) return startFailure()
     var entries = exitCode === 0 ? Spectra.parseChangeList(out) : null
     if (entries !== null) return { entries: entries, error: "" }
     var line = Spectra.firstLine(err) || Spectra.firstLine(out)
@@ -181,7 +183,7 @@ Scope {
   Process {
     id: listProcess
     running: false
-    command: [project.cli, "list", "--json", "--no-color"]
+    command: Spectra.cliCommand(project.cli, ["list", "--json", "--no-color"])
     workingDirectory: project.path
     stdout: StdioCollector { waitForEnd: true }
     stderr: StdioCollector { waitForEnd: true }
@@ -206,7 +208,7 @@ Scope {
   Process {
     id: parkedProcess
     running: false
-    command: [project.cli, "list", "--parked", "--json", "--no-color"]
+    command: Spectra.cliCommand(project.cli, ["list", "--parked", "--json", "--no-color"])
     workingDirectory: project.path
     stdout: StdioCollector { waitForEnd: true }
     stderr: StdioCollector { waitForEnd: true }
@@ -225,7 +227,7 @@ Scope {
   }
 
   function startFailure() {
-    return { entries: [], error: cli + " could not be started (is it on the shell's PATH?)" }
+    return { entries: [], error: Spectra.startFailureMessage(cli) }
   }
 
   // ---- instruction-file update -----------------------------------------
@@ -249,7 +251,7 @@ Scope {
   Process {
     id: updateProcess
     running: false
-    command: [project.cli, "update", "--no-color"]
+    command: Spectra.cliCommand(project.cli, ["update", "--no-color"])
     workingDirectory: project.path
     stdout: StdioCollector { waitForEnd: true }
     stderr: StdioCollector { waitForEnd: true }
@@ -262,6 +264,7 @@ Scope {
         var err = Spectra.firstLine(updateProcess.stderr.text)
         project.updateResult = exitCode === 0
           ? (out || err || project.cli + " update finished")
+          : exitCode === 127 ? Spectra.startFailureMessage(project.cli)
           : (err || out || project.cli + " update exited with code " + exitCode)
       })
     }
@@ -416,7 +419,7 @@ Scope {
   Process {
     id: statusProcess
     running: false
-    command: [project.cli, "status", "--change", project.statusChange, "--json", "--no-color"]
+    command: Spectra.cliCommand(project.cli, ["status", "--change", project.statusChange, "--json", "--no-color"])
     workingDirectory: project.path
     stdout: StdioCollector { waitForEnd: true }
     stderr: StdioCollector { waitForEnd: true }
@@ -425,7 +428,8 @@ Scope {
         var artifacts = exitCode === 0 ? Spectra.parseStatus(statusProcess.stdout.text) : null
         var next = Object.assign({}, project.artifactsByChange)
         next[project.statusChange] = artifacts === null
-          ? { error: Spectra.firstLine(statusProcess.stderr.text) || (project.cli + " status exited with code " + exitCode) }
+          ? { error: exitCode === 127 ? Spectra.startFailureMessage(project.cli)
+                     : (Spectra.firstLine(statusProcess.stderr.text) || (project.cli + " status exited with code " + exitCode)) }
           : { artifacts: artifacts }
         project.artifactsByChange = next
         if (project.statusQueued !== "") {
