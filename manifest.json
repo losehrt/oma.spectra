@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "oma.spectra",
   "name": "Spectra",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "author": "Nickle Cheng <losehrt@gmail.com>",
   "license": "MIT",
   "description": "Spectra changes, specs and project settings across your projects, as a native Omarchy bar panel.",

@@ -354,6 +354,20 @@ Panel {
     if (cursorKind === "project") cursorCol = wrapped
   }
 
+  // The version shown in the hero comes from manifest.json, so a release
+  // bump is one edit. Missing or malformed manifest: no pill.
+  property string pluginVersion: ""
+
+  FileView {
+    id: manifestFile
+    path: String(Qt.resolvedUrl("manifest.json")).replace(/^file:\/\//, "")
+    watchChanges: false
+    printErrors: false
+    onLoaded: {
+      try { root.pluginVersion = String(JSON.parse(text()).version || "") } catch (e) { root.pluginVersion = "" }
+    }
+  }
+
   // Settings of this widget (not of a project) are persisted the way the
   // clock panel does it: apply locally, then hand the entry to the shell,
   // which writes shell.json and pushes the same values back to the widget.
@@ -622,7 +636,7 @@ Panel {
     }
     function state(): string {
       var p = root.project
-      return JSON.stringify({ opened: root.opened, project: p ? projects.labelFor(p.path) : null,
+      return JSON.stringify({ opened: root.opened, version: root.pluginVersion, project: p ? projects.labelFor(p.path) : null,
         projects: root.projectList.map(function(q) { return projects.labelFor(q.path) }), roots: projects.roots, change: root.selectedChangeName,
         tab: root.selectedTab, pending: root.pendingSelect, settingsExpanded: root.settingsExpanded,
         changes: p ? p.changes.map(function(c) { return c.name + (c.parked ? " (parked)" : "") }) : [],
@@ -743,7 +757,8 @@ Panel {
           // ---------- Hero: logo · Spectra · project ----------
           PanelHero {
             width: parent.width
-            title: "Spectra"
+            title: root.moduleName
+            detail: root.pluginVersion !== "" ? "v" + root.pluginVersion : ""
             meta: root.project ? projects.labelFor(root.project.path) : ""
             foreground: root.foreground
             fontFamily: root.fontFamily
