@@ -29,10 +29,10 @@
     "schema": [
       {
         "key": "projectsRoot",
-        "type": "path",
-        "label": "Projects folder",
+        "type": "string",
+        "label": "Projects folders",
         "defaultValue": "~/projects",
-        "description": "Direct subfolders containing a .spectra.yaml are listed as projects."
+        "description": "One or more folders separated by ':'; their direct subfolders containing a .spectra.yaml are listed."
       }
     ]
   }

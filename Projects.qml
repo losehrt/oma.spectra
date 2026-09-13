@@ -9,7 +9,11 @@ Scope {
   id: root
 
   property string projectsRoot: "~/projects"
-  readonly property string rootPath: Spectra.expandHome(projectsRoot, Quickshell.env("HOME"))
+  // One or more folders, `:`-separated; an empty setting means the default.
+  readonly property var roots: {
+    var list = Spectra.splitRoots(projectsRoot, Quickshell.env("HOME"))
+    return list.length > 0 ? list : Spectra.splitRoots("~/projects", Quickshell.env("HOME"))
+  }
 
   // [{id, name}] in name order, from the last scan.
   property var records: []
@@ -34,8 +38,9 @@ Scope {
   Process {
     id: findProcess
     running: false
-    // -L: a symlinked project directory counts like a real one.
-    command: ["find", "-L", root.rootPath, "-mindepth", "2", "-maxdepth", "2", "-name", ".spectra.yaml"]
+    // -L: a symlinked project directory counts like a real one. A root that
+    // does not exist only earns a stderr line; the others still list.
+    command: ["find", "-L"].concat(root.roots).concat(["-mindepth", "2", "-maxdepth", "2", "-name", ".spectra.yaml"])
     stdout: StdioCollector { waitForEnd: true }
     stderr: StdioCollector { waitForEnd: true }
     onExited: function(exitCode, exitStatus) {
@@ -44,7 +49,7 @@ Scope {
   }
 
   function applyScan(output) {
-    var next = Spectra.projectsFromFind(output)
+    var next = Spectra.labelProjects(Spectra.projectsFromFind(output))
     // Same paths, same objects: rebuilding the Instantiator would drop every
     // loaded change list just to recreate identical projects.
     if (JSON.stringify(next) !== JSON.stringify(records)) records = next
@@ -72,6 +77,13 @@ Scope {
     var list = []
     for (var i = 0; i < instantiator.count; i++) list.push(instantiator.objectAt(i))
     projects = list
+  }
+
+  // Chip label for a project path: its name, or `<root>/<name>` on a clash.
+  function labelFor(path) {
+    for (var i = 0; i < records.length; i++)
+      if (records[i].id === path) return records[i].label
+    return path.slice(path.lastIndexOf("/") + 1)
   }
 
   function projectAt(path) {

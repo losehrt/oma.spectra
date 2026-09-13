@@ -45,7 +45,7 @@ Panel {
   readonly property var cursorRows: {
     var rows = []
     var p = project
-    if (projectList.length > 1) rows.push({ kind: "project", items: projectList.map(function(q) { return q.name }) })
+    if (projectList.length > 1) rows.push({ kind: "project", items: projectList.map(function(q) { return projects.labelFor(q.path) }) })
     var artifactRows = []
     if (selectedChange && contentExpanded) {
       artifactRows.push({ kind: "tab", items: artifactTabs })
@@ -491,8 +491,8 @@ Panel {
     }
     function state(): string {
       var p = root.project
-      return JSON.stringify({ opened: root.opened, project: p ? p.name : null,
-        projects: root.projectList.map(function(q) { return q.name }), change: root.selectedChangeName,
+      return JSON.stringify({ opened: root.opened, project: p ? projects.labelFor(p.path) : null,
+        projects: root.projectList.map(function(q) { return projects.labelFor(q.path) }), roots: projects.roots, change: root.selectedChangeName,
         tab: root.selectedTab, pending: root.pendingSelect, settingsExpanded: root.settingsExpanded,
         changes: p ? p.changes.map(function(c) { return c.name + (c.parked ? " (parked)" : "") }) : [],
         archived: p ? p.archived.map(function(c) { return c.key }) : [], archivedExpanded: root.archivedExpanded,
@@ -507,7 +507,12 @@ Panel {
     }
     function project(name: string): string {
       for (var i = 0; i < root.projectList.length; i++)
-        if (root.projectList[i].name === name) { root.selectProject(i); return "ok" }
+        if (projects.labelFor(root.projectList[i].path) === name) { root.selectProject(i); return "ok" }
+      var matches = []
+      for (var j = 0; j < root.projectList.length; j++)
+        if (root.projectList[j].name === name) matches.push(j)
+      if (matches.length === 1) { root.selectProject(matches[0]); return "ok" }
+      if (matches.length > 1) return "ambiguous: " + matches.map(function(k) { return projects.labelFor(root.projectList[k].path) }).join(", ")
       return "unknown project: " + name
     }
   }
@@ -599,7 +604,7 @@ Panel {
           PanelHero {
             width: parent.width
             title: "Spectra"
-            meta: root.project ? root.project.name : ""
+            meta: root.project ? projects.labelFor(root.project.path) : ""
             foreground: root.foreground
             fontFamily: root.fontFamily
             iconComponent: Component {
@@ -633,18 +638,19 @@ Panel {
                 required property int index
 
                 width: projectSwitch.cellWidth
-                text: modelData.name
+                readonly property string label: projects.labelFor(modelData.path)
+                text: label
                 selected: index === root.projectIndex
-                hasCursor: root.cursorAt("project", modelData.name)
+                hasCursor: root.cursorAt("project", label)
                 bordered: true
                 foreground: root.foreground
                 fontFamily: root.fontFamily
                 fontSize: Style.font.bodySmall
                 verticalPadding: Style.spacing.controlPaddingY
-                onClicked: { root.setCursor("project", modelData.name); root.selectProject(index) }
-                onHovered: function(isHovered) { if (isHovered) root.setCursor("project", modelData.name) }
-                Component.onCompleted: root.registerCursorTarget("project", modelData.name, this)
-                Component.onDestruction: root.unregisterCursorTarget("project", modelData.name, this)
+                onClicked: { root.setCursor("project", label); root.selectProject(index) }
+                onHovered: function(isHovered) { if (isHovered) root.setCursor("project", label) }
+                Component.onCompleted: root.registerCursorTarget("project", label, this)
+                Component.onDestruction: root.unregisterCursorTarget("project", label, this)
               }
             }
           }
@@ -654,7 +660,7 @@ Panel {
             visible: projects.scanned && root.projectList.length === 0
             textFormat: Text.PlainText
             width: parent.width
-            text: "No Spectra projects under " + projects.rootPath
+            text: "No Spectra projects under " + projects.roots.map(function(r) { return Spectra.abbreviateHome(r, Quickshell.env("HOME")) }).join(", ")
             color: root.dim
             font.family: root.fontFamily
             font.pixelSize: Style.font.body
