@@ -1,5 +1,7 @@
 # Spectra
 
+![The Spectra panel open on an Omarchy desktop](assets/screenshot.jpg)
+
 One bar icon and one panel for every [Spectra](https://spectra.5xcamp.us/)
 project on the machine. The panel lists each project's changes (active and
 parked) with their task progress, shows which artifacts a change has, renders
