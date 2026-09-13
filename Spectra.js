@@ -211,3 +211,38 @@ function basenamesFromFind(output) {
   }
   return names;
 }
+
+// `projectsRoot` holds one or more folders separated by `:` like PATH. Empty
+// segments and repeats are dropped; each segment gets its `~` expanded.
+function splitRoots(value, home) {
+  var roots = [];
+  var parts = String(value || "").split(":");
+  for (var i = 0; i < parts.length; i++) {
+    var p = expandHome(parts[i].trim(), home);
+    if (p !== "" && roots.indexOf(p) < 0) roots.push(p);
+  }
+  return roots;
+}
+
+// Chip labels: the directory name, or `<root folder>/<name>` when two roots
+// hold a project of the same name. Sorted by name, then by path.
+function labelProjects(records) {
+  var counts = {};
+  for (var i = 0; i < records.length; i++) counts[records[i].name] = (counts[records[i].name] || 0) + 1;
+  var out = records.map(function(r) {
+    var parent = r.id.slice(0, r.id.lastIndexOf("/"));
+    var rootName = parent.slice(parent.lastIndexOf("/") + 1);
+    return { id: r.id, name: r.name, label: counts[r.name] > 1 ? rootName + "/" + r.name : r.name };
+  });
+  out.sort(function(a, b) {
+    if (a.name !== b.name) return a.name < b.name ? -1 : 1;
+    return a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
+  });
+  return out;
+}
+
+function abbreviateHome(path, home) {
+  var p = String(path || "");
+  if (home && (p === home || p.indexOf(home + "/") === 0)) return "~" + p.slice(home.length);
+  return p;
+}

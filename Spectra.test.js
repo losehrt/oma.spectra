@@ -47,5 +47,11 @@ check("artifacts from files", artifactsFromFiles(["proposal.md", "tasks.md"]).ma
 check("archived key is the directory name", arch.map(function(e) { return e.key; }), ["2026-09-13-panel-project-settings", "2026-09-13-oma-spectra-panel", "legacy-change"]);
 check("basenames", basenamesFromFind("/a/b/proposal.md\n/a/b/tasks.md\n"), ["proposal.md", "tasks.md"]);
 
+// multiple roots
+check("splitRoots", splitRoots("~/projects:~/work::~/projects", "/home/u"), ["/home/u/projects", "/home/u/work"]);
+check("splitRoots empty", splitRoots("", "/home/u"), []);
+check("labels", labelProjects([{ id: "/a/foo", name: "foo" }, { id: "/b/foo", name: "foo" }, { id: "/a/bar", name: "bar" }]).map(function(r) { return r.label; }), ["bar", "a/foo", "b/foo"]);
+check("abbreviateHome", [abbreviateHome("/home/u/x", "/home/u"), abbreviateHome("/opt/x", "/home/u")], ["~/x", "/opt/x"]);
+
 console.log(failures === 0 ? "all passed" : failures + " failed");
 process.exit(failures === 0 ? 0 : 1);
