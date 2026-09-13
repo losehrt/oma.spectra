@@ -26,6 +26,23 @@ and projects initialised by it record `cli_command: spxa`:
 npm install -g @kaochenlong/spxa
 ```
 
+The shell is started by Hyprland, not by your terminal, so it only sees the
+login-session PATH. If node comes from mise, nvm, asdf or similar, `spxa`
+lives in a directory your `.bashrc`/`.zshrc` adds — the panel then reports
+`spxa could not be started (is it on the shell's PATH?)` for every project
+and the update button fails the same way. Put that directory on the session
+PATH once and log out and back in:
+
+```sh
+# mise
+mkdir -p ~/.config/environment.d
+printf 'PATH=%s/.local/share/mise/shims:$PATH\n' "$HOME" > ~/.config/environment.d/mise.conf
+# nvm: use $HOME/.nvm/versions/node/<version>/bin instead of the shims folder
+```
+
+Check with `omarchy-shell oma.spectra state | jq .listError` — it should be
+empty after the next login.
+
 Run `omarchy plugin validate` and the other `omarchy plugin` commands on the
 real path `~/.config/omarchy/plugins/oma.spectra`; the validator refuses a
 symlink as the starting point.
