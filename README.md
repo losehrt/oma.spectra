@@ -117,7 +117,8 @@ selection and the content area are cleared.
 
 ### Keys
 
-A keyboard cursor walks every clickable item in visual order: project chips,
+A keyboard cursor walks every clickable item in visual order: the folder
+button, project chips,
 change rows, the ARCHIVED header and its rows, the artifact tabs, delta spec
 chips, the SPECS header and its rows, the SETTINGS header and its rows, the
 update button. The panel scrolls to keep the cursor visible; hovering an item with
@@ -141,8 +142,14 @@ Data loads when the panel opens and on `r`; nothing runs while it is closed.
 | --- | --- | --- | --- |
 | `projectsRoot` | string | `~/projects` | One or more folders separated by `:` (e.g. `~/projects:~/work`); their **direct** subfolders are scanned for `.spectra.yaml`. `~` is expanded per folder, a folder that does not exist is skipped. When two folders hold a project of the same name the chips read `<folder>/<name>` (`projects/foo`, `work/foo`). |
 
-Set it inline in the bar layout entry (`{ "id": "oma.spectra", "projectsRoot": "~/code" }`)
-or through the shell's widget settings.
+Set it from the panel: the folder button beside the project name (and beside
+the `No Spectra projects under …` line) opens a field pre-filled with the
+current value; `Enter` writes it into this widget's entry in
+`~/.config/omarchy/shell.json` and rescans, `Esc` cancels. Folders that do
+not exist are listed under the field as `找不到 …` but can still be saved.
+You can also set it inline in the bar layout entry
+(`{ "id": "oma.spectra", "projectsRoot": "~/code" }`) or through the shell's
+widget settings.
 
 Each project's `.spectra.yaml` supplies `cli_command` (one of `spectra`,
 `specx`, `spxa`; default `spectra`) and `spec_dir` (default `openspec`).
@@ -156,6 +163,7 @@ on the login-session PATH the shell was started with.
 `next`, `project <name>`, `select <change>`, `tab <proposal|design|specs|tasks>`,
 `spec <capability>`, `terminal`, `settings <show|hide|toggle>` (fold or
 expand the settings section), `archived <show|hide|toggle>`, `specs <show|hide|toggle>`, `content <show|hide|toggle>`,
+`roots <show|hide|toggle>` (the project-roots field), `setRoots <value>` (answers `ok` or the reason),
 `cursor <down|up|left|right|activate>`, `setSetting <key> <value>` (answers `ok` or
 the reason the value was refused), `update` (answers `started` or why not),
 `state` (JSON of what is open and selected, the cursor position and row
