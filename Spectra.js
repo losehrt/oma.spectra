@@ -227,13 +227,25 @@ function splitRoots(value, home) {
 // Chip labels: the directory name, or `<root folder>/<name>` when two roots
 // hold a project of the same name. Sorted by name, then by path.
 function labelProjects(records) {
-  var counts = {};
-  for (var i = 0; i < records.length; i++) counts[records[i].name] = (counts[records[i].name] || 0) + 1;
+  // Start with the bare name; while any label is shared, give the sharers
+  // one more path component each (`src/foo` → `work/src/foo`) until unique.
   var out = records.map(function(r) {
-    var parent = r.id.slice(0, r.id.lastIndexOf("/"));
-    var rootName = parent.slice(parent.lastIndexOf("/") + 1);
-    return { id: r.id, name: r.name, label: counts[r.name] > 1 ? rootName + "/" + r.name : r.name };
+    return { id: r.id, name: r.name, label: r.name, parts: r.id.split("/").filter(function(x) { return x !== ""; }), depth: 1 };
   });
+  for (var round = 0; round < 32; round++) {
+    var counts = {};
+    for (var i = 0; i < out.length; i++) counts[out[i].label] = (counts[out[i].label] || 0) + 1;
+    var clash = false;
+    for (var j = 0; j < out.length; j++) {
+      if (counts[out[j].label] > 1 && out[j].depth < out[j].parts.length) {
+        out[j].depth++;
+        out[j].label = out[j].parts.slice(-out[j].depth).join("/");
+        clash = true;
+      }
+    }
+    if (!clash) break;
+  }
+  out = out.map(function(r) { return { id: r.id, name: r.name, label: r.label }; });
   out.sort(function(a, b) {
     if (a.name !== b.name) return a.name < b.name ? -1 : 1;
     return a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
