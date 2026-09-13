@@ -23,8 +23,12 @@ Scope {
   // Project objects in the same order as `records`.
   property var projects: []
 
+  // A rescan asked for mid-scan runs again afterwards: the running `find`
+  // was started with the roots of that moment.
+  property bool rescanPending: false
+
   function rescan() {
-    if (findProcess.running) return
+    if (findProcess.running) { rescanPending = true; return }
     findProcess.running = true
   }
 
@@ -44,7 +48,10 @@ Scope {
     stdout: StdioCollector { waitForEnd: true }
     stderr: StdioCollector { waitForEnd: true }
     onExited: function(exitCode, exitStatus) {
-      Qt.callLater(function() { root.applyScan(findProcess.stdout.text) })
+      Qt.callLater(function() {
+        root.applyScan(findProcess.stdout.text)
+        if (root.rescanPending) { root.rescanPending = false; root.rescan() }
+      })
     }
   }
 

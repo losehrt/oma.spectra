@@ -358,6 +358,7 @@ Panel {
   function submitRoots() {
     var reason = setRoots(rootsField.text)
     rootsError = reason
+    // Stay open on any message — a refused value or an unpersisted one.
     if (reason !== "") return
     rootsEditing = false
     keyCatcher.forceActiveFocus()
@@ -377,14 +378,16 @@ Panel {
     }
   }
 
-  // "" on success, otherwise the reason shown under the field.
+  // "" on success, otherwise the reason shown under the field. A value that
+  // applied but could not be written to shell.json reports that as well, so
+  // neither the field nor an IPC caller mistakes it for a persisted change.
   function setRoots(value) {
     var v = String(value || "").trim()
     if (Spectra.splitRoots(v, Quickshell.env("HOME")).length === 0) return "至少要一個資料夾"
     persistSettings({ projectsRoot: v })
     projects.checkRoots(projects.roots)
     projects.refreshAll()
-    return ""
+    return persistWarning
   }
 
   function refreshNow() {
@@ -781,6 +784,7 @@ Panel {
             RootsButton {
               id: emptyButton
               registers: false
+              hasCursor: false
               anchors.right: parent.right
               anchors.verticalCenter: parent.verticalCenter
             }
