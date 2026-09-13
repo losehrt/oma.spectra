@@ -9,6 +9,39 @@ and regenerate its instruction files. Everything else stays read-only —
 `new`, `apply`, `archive`, `park` and friends live in Claude Code and the
 terminal.
 
+## Install
+
+```sh
+omarchy plugin add https://github.com/losehrt/oma.spectra.git --enable
+```
+
+That clones this repository into `~/.config/omarchy/plugins/oma.spectra`
+and drops the icon into your bar; `omarchy plugin update` pulls new versions.
+The panel drives the Spectra CLI, so one of `spxa`, `specx` or `spectra`
+must be on the shell's login PATH:
+
+```sh
+npm install -g @kaochenlong/spxa
+```
+
+A key binding for the panel goes in `~/.config/hypr/bindings.lua`:
+
+```lua
+o.bind("SUPER + CTRL + ALT + S", "Spectra", "omarchy-shell shell toggle oma.spectra")
+```
+
+What this plugin writes to disk — nothing else: the five settings keys
+`locale`, `tdd`, `audit`, `experience`, `cli_command` in a project's
+`.spectra.yaml` (only when you change them in the panel), and whatever
+`<cli> update` regenerates under that project's `.claude/` when you press
+the update button. Everything it shows is read from files and from
+`<cli> list` / `<cli> status`. Like every Omarchy plugin it runs unsandboxed
+inside the shell, so read the code before enabling it.
+
+The `docs/spectra/` directory holds this plugin's own Spectra specifications
+and archived changes — the panel can browse them once you point
+`projectsRoot` at a folder containing this repository.
+
 ## Bar
 
 The icon is the Spectra mark from https://spectra.5xcamp.us/ (`assets/spectra.svg`,

@@ -3,10 +3,12 @@
   "id": "oma.spectra",
   "name": "Spectra",
   "version": "0.1.0",
-  "author": "oma",
+  "author": "Nickle Cheng <losehrt@gmail.com>",
   "license": "MIT",
   "description": "Spectra changes, specs and project settings across your projects, as a native Omarchy bar panel.",
-  "kinds": ["bar-widget"],
+  "kinds": [
+    "bar-widget"
+  ],
   "activation": "on-demand",
   "entryPoints": {
     "barWidget": "Panel.qml"
@@ -15,14 +17,23 @@
     "displayName": "Spectra",
     "description": "One bar icon and one panel: every Spectra project under a folder, its open changes with task progress, and the rendered proposal / design / specs / tasks of each change.",
     "category": "AI",
-    "aliases": ["spectra", "spxa"],
+    "aliases": [
+      "spectra",
+      "spxa"
+    ],
     "allowMultiple": false,
     "defaultSection": "right",
     "defaults": {
       "projectsRoot": "~/projects"
     },
     "schema": [
-      { "key": "projectsRoot", "type": "path", "label": "Projects folder", "defaultValue": "~/projects", "description": "Direct subfolders containing a .spectra.yaml are listed as projects." }
+      {
+        "key": "projectsRoot",
+        "type": "path",
+        "label": "Projects folder",
+        "defaultValue": "~/projects",
+        "description": "Direct subfolders containing a .spectra.yaml are listed as projects."
+      }
     ]
   }
 }
