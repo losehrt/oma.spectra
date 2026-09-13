@@ -1392,7 +1392,6 @@ Panel {
   component RootsButton: Button {
     property bool registers: true
     iconText: "󰉋"
-    tooltipText: "Projects folders"
     bordered: true
     foreground: root.foreground
     fontFamily: root.fontFamily
